@@ -1,0 +1,16 @@
+*
+!*/
+
+vendor/
+
+!/.gitignore
+!LICENSE
+!README*
+
+!*.go
+!go.sum
+!go.mod
+
+!Makefile
+
+!.env.template
