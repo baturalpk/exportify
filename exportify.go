@@ -1,6 +1,7 @@
 package main
 
 import (
+	"bufio"
 	"context"
 	"encoding/json"
 	"errors"
@@ -8,6 +9,7 @@ import (
 	"io/ioutil"
 	"net/http"
 	"os"
+	"strings"
 	"time"
 
 	"golang.org/x/oauth2"
@@ -15,7 +17,6 @@ import (
 	"github.com/google/uuid"
 	pkceutils "github.com/jimlambrt/go-oauth-pkce-code-verifier"
 	"github.com/pkg/browser"
-	"github.com/spf13/viper"
 	"github.com/zmb3/spotify/v2"
 	spotifyauth "github.com/zmb3/spotify/v2/auth"
 )
@@ -51,11 +52,16 @@ func init() {
 }
 
 func main() {
-	viper.SetConfigFile(".env")
-	if err := viper.ReadInConfig(); err != nil {
+	fmt.Println("Please enter your Spotify Client ID:")
+	stdin := bufio.NewReader(os.Stdin)
+	line, err := stdin.ReadString('\n')
+	if err != nil {
 		FatalX(err)
 	}
-	os.Setenv("SPOTIFY_ID", viper.GetString("SPOTIFY_ID"))
+	clientID := strings.Trim(strings.Replace(line, "\r\n", "", -1), " ")
+	if err := os.Setenv("SPOTIFY_ID", clientID); err != nil {
+		FatalX(err)
+	}
 
 	auth = spotifyauth.New(
 		spotifyauth.WithRedirectURL(redirectURL),
@@ -63,7 +69,11 @@ func main() {
 	)
 
 	http.HandleFunc("/callback", handleOAuth)
-	go http.ListenAndServe(fmt.Sprintf(":%d", Port), nil)
+	go func() {
+		if err := http.ListenAndServe(fmt.Sprintf(":%d", Port), nil); err != nil {
+			FatalX(err)
+		}
+	}()
 
 	url := auth.AuthURL(state,
 		oauth2.SetAuthURLParam("code_challenge_method", "S256"),
